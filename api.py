@@ -82,8 +82,10 @@ def update_last_message(client_ip):
 async def broadcast(message):
     message = html.escape(message)
     for client in connected:
-        await client.send(message)
-
+        try:
+          await client.send(message)
+        except:
+          pass
 ip = sys.argv[1]
 port = sys.argv[2]
 
