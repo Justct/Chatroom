@@ -22,12 +22,12 @@ def main():
         ip = "0.0.0.0"
 
     try:
-        port =int( input("Enter the port number (default 5010): "))
+        port =int( input("Enter the port number (default 8080): "))
         port = port.replace(" ", "")
         if port == "":
-            port = "5010"
+            port = "8080"
     except:
-        port = "5010"
+        port = "8080"
 
     use_ngrok = input("Do you want to use Ngrok for port forwarding? (y/N): ").lower() == "y"
     if use_ngrok:
