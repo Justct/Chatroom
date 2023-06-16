@@ -4,9 +4,10 @@ import platform
 
 
 def start_server(ip, port):
-    if platform.system().lower() == "windows":
+    if platform.system().lower() == "linux":
         os.system(f"python3 api.py {ip} {port}")
-
+    else:
+        os.system(f"python api.py {ip} {port}")
 def start_ngrok(port, use_https):
     print(f"Starting Ngrok on port {port}")
     if use_https:
