@@ -1,42 +1,96 @@
-import subprocess
-import os
-import platform
+import sys
+import html
+import asyncio
+import websockets
+from datetime import datetime, timedelta
 
 
-def start_server(ip, port):
-    if platform.system().lower() == "linux":
-        os.system(f"python3 api.py {ip} {port}")
-    else:
-        os.system(f"python api.py {ip} {port}")
-def start_ngrok(port, use_https):
-    print(f"Starting Ngrok on port {port}")
-    if use_https:
-        subprocess.run(["ngrok", "http", port])
-    else:
-        subprocess.run(["ngrok", "tcp", port])
 
-def main():
-    ip = input("Enter the IP address to run the API (default '0.0.0.0'): ")
-    ip = ip.replace(" ", "")
-    if ip  == "":
-        ip = "0.0.0.0"
+MAX_CONNECTIONS = 1000000  # Maximum allowed concurrent connections
+CONNECTION_TIMEOUT = 300  # Connection timeout in seconds
+MAX_CONNECTIONS_PER_IP = 3  # Maximum allowed connections per IP address
+MAX_MESSAGES_PER_MINUTE = 20  # Maximum allowed messages per minute per IP address
+
+
+
+connected = set()
+ip_connections = {}
+ip_last_message = {}
+username_mapping = {}
+
+
+
+async def chat(websocket, path):
+    # Check maximum concurrent connections
+    if len(connected) >= MAX_CONNECTIONS:
+        await websocket.close()
+        return
+
+    # Check maximum connections per IP
+    client_ip = websocket.remote_address[0]
+    ip_connections.setdefault(client_ip, 0)
+    if ip_connections[client_ip] >= MAX_CONNECTIONS_PER_IP:
+        await websocket.close()
+        return
+
+    connected.add(websocket)
+    ip_connections[client_ip] += 1
 
     try:
-        port =int( input("Enter the port number (default 8080): "))
-        port = port.replace(" ", "")
-        if port == "":
-            port = "8080"
-    except:
-        port = "8080"
+        is_first_message = True
+        while True:
+            message = await websocket.recv()
 
-    use_ngrok = input("Do you want to use Ngrok for port forwarding? (y/N): ").lower() == "y"
-    if use_ngrok:
-        use_https = input("Do you want to use HTTPS or TCP? [using HTTPS provided by ngrok will expose your IP] (y/N): ").lower() == "y"
+            if is_first_message:
+                is_first_message = False
+                if message in username_mapping.values():
+                    await websocket.send("re::re")
+                    is_first_message = True
+                    continue
+                else:
+                    username_mapping[websocket] = message
+                    await broadcast(f"join::{message}")
+            else:
+                if not check_rate_limit(client_ip):
+                    await websocket.close()
+                    return
 
-    if use_ngrok:
-        start_ngrok(port, use_https)
+                await broadcast(f"msg::{username_mapping[websocket]}::{message}")
+                update_last_message(client_ip)
+    except websockets.exceptions.ConnectionClosed:
+        if websocket in username_mapping:
+            username = username_mapping.pop(websocket)
+            await broadcast(f"left::{username}")
 
-    start_server(ip, port)
+    finally:
+        connected.remove(websocket)
+        ip_connections[client_ip] -= 1
 
-if __name__ == "__main__":
-    main()
+def check_rate_limit(client_ip):
+    # Check if rate limit exceeded
+    if client_ip in ip_last_message:
+        last_message_time = ip_last_message[client_ip]
+        elapsed_time = datetime.now() - last_message_time
+        if elapsed_time < timedelta(minutes=1) and ip_connections[client_ip] > MAX_MESSAGES_PER_MINUTE:
+            return False
+    return True
+
+def update_last_message(client_ip):
+    # Update the last message time for the IP address
+    ip_last_message[client_ip] = datetime.now()
+
+async def broadcast(message):
+    message = html.escape(message)
+    for client in connected:
+        try:
+          await client.send(message)
+        except:
+          pass
+ip = sys.argv[1]
+port = sys.argv[2]
+
+start_server = websockets.serve(chat, ip , int(port))
+
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()
+
