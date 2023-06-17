@@ -11,6 +11,7 @@ f.close()
 room_name = data_["name"]
 room_url = data_["url"]
 
+
 def P():
     response = requests.get(f"https://backendjustchat.darkmash.repl.co/find/{room_name}")
     return response.text == room_url
@@ -18,11 +19,7 @@ def P():
 @app.route('/verify/if/it/a/chat/room/of/just/chat', methods=['GET'])
 def verify_chat_room():
     if P():
-        func = request.environ.get('werkzeug.server.shutdown')
-        if func is None:
-            raise RuntimeError('Not running with the Werkzeug Server')
-        func()
-        return "Flask app stopped"
+        quit()
 
     return room_name
 
@@ -31,8 +28,6 @@ def verify_chat_room():
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print("Please provide the IP and port as command line arguments.")
-        print("Usage: python app.py <ip> <port>")
         sys.exit(1)
 
     ip = sys.argv[1]
