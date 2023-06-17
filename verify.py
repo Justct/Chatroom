@@ -23,8 +23,7 @@ def verify_chat_room():
             raise RuntimeError('Not running with the Werkzeug Server')
         func()
         return "Flask app stopped"
-    else:
-        return "Continue running Flask app"
+
     return room_name
 
 
