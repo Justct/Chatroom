@@ -1,14 +1,19 @@
 from flask import Flask, request
 import requests
 import sys
+import json
 
 app = Flask(__name__)
 
-room_name = input("The room Name : ")
+f = open("info.json", "r")
+data_ = json.loads(f.read())
+f.close()
+room_name = data_["name"]
+room_url = data_["url"]
 
 def P():
     response = requests.get(f"https://backendjustchat.darkmash.repl.co/find/{room_name}")
-    return response.text.startswith("http")
+    return response.text == room_url
 
 @app.route('/verify/if/it/a/chat/room/of/just/chat', methods=['GET'])
 def verify_chat_room():
