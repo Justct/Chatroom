@@ -13,7 +13,7 @@ room_url = data_["url"]
 
 
 def P():
-    response = requests.get(f"https://backendjustchat.darkmash.repl.co/find/{room_name}")
+    response = requests.get(f"https://justct.pythonanywhere.com/find/{room_name}")
     return response.text == room_url
 
 @app.route('/verify/if/it/a/chat/room/of/just/chat', methods=['GET'])
