@@ -11,7 +11,7 @@ f.write(json.dumps({"name":room_name, "url" : room_url}))
 f.close()
 
 def P():
-    response = requests.get(f"https://backendjustchat.darkmash.repl.co/find/{room_name}")
+    response = requests.get(f"https://justct.pythonanywhere.com/find/{room_name}")
     return response.text == room_url
 
 if P():
